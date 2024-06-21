@@ -1,6 +1,9 @@
-import type { Metadata } from "next";
+import { ReactQueryClientProvider } from "@/components/ReactQueryProvider";
 import { Inter } from "next/font/google";
+import type { Metadata } from "next";
 import "./globals.css";
+import GraphQlProvider from "@/lib/provider";
+
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -15,8 +18,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
-    </html>
+    <ReactQueryClientProvider>
+      <html lang="en">
+        <body className={inter.className}>
+          <GraphQlProvider>
+            {children}
+          </GraphQlProvider>
+        </body>
+      </html>
+    </ReactQueryClientProvider>
   );
 }
