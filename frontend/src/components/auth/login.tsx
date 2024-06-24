@@ -1,12 +1,15 @@
 "use client"
-import useUsers from "@/hook/useUsers";
-import * as z from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
+import { LOGIN_USER } from "@/graphql/mutations/login";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@apollo/client";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
 import { Button } from "../ui/button";
-import Link from "next/link";
 import { Input } from "../ui/input";
+import Link from "next/link";
+import * as z from "zod";
 
 const FormSchema = z.object({
     email: z.string().email(),
@@ -14,10 +17,7 @@ const FormSchema = z.object({
 })
 
 export default function Login() {
-    // const { loading, error, data } = useQuery(QUERY);
-
-    // const { data, loading, error } = useUsers()
-    // console.log(data.getUsers);
+    const router = useRouter();
 
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
@@ -27,32 +27,28 @@ export default function Login() {
         },
     })
 
-    async function onSubmit(data: z.infer<typeof FormSchema>) {
+    const [loginUser, { loading, error, data }] = useMutation(LOGIN_USER, {
+        onCompleted: (data) => {
+            console.log("DATA", data)
+        }
+    })
 
-        // setLoading(true);
+    async function onSubmit(dataForm: z.infer<typeof FormSchema>) {
 
-        // setLoading(false);
+        try {
+            const response = await loginUser({
+                variables: {
+                    email: dataForm.email,
+                    password: dataForm.password,
+                },
+            });
+            console.log(response);
+            router.push('/home');
+        } catch (_) {
+            console.log("ERROR");
+        }
 
-        // if (error) {
-        //     toast.error(error.message + "!",
-        //         {
-        //             style: {
-        //                 borderRadius: '3px',
-        //                 background: '#333',
-        //                 color: '#fff',
-        //             },
-        //         });
-        // } else {
-        //     toast.success("Login successfully!",
-        //         {
-        //             style: {
-        //                 borderRadius: '3px',
-        //                 background: '#333',
-        //                 color: '#fff',
-        //             },
-        //         });
-        //     router.push('/quiz');
-        // }
+        console.log(error)
         form.reset();
     }
 
@@ -87,7 +83,7 @@ export default function Login() {
                                             <Link href="/auth/fortgotpassword" className="text-xs text-primary underline" >Forgot Password?</Link>
                                         </div>
                                         <FormControl>
-                                            <Input type="password" placeholder="********" {...field} />
+                                            <Input type="password" placeholder="********"  {...field} />
                                         </FormControl>
                                         <FormMessage className="text-xs" />
                                     </FormItem>
