@@ -1,3 +1,4 @@
+"use client"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,16 +7,37 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import Link from "next/link";
 import { z } from "zod"
+import { useMutation } from "@apollo/client";
+import { REGISTER_USER } from "@/graphql/mutations/register";
+import { GraphQLErrorExtensions } from "graphql";
+import { useState } from "react";
 
 const FormSchema = z.object({
     name: z.string().min(3, { message: "Name must be at least 3 characters." }),
     lastname: z.string().min(3, { message: "Last Name must be at least 3 characters." }),
     email: z.string().email("Invalid email address"),
-    password: z.string().min(8, { message: "Password must be at least 8 characters." })
-        .regex(/^(?=.*\d)(?=.*\W)(?=.*[A-Z])(?=.*[a-z])(?=.*((?=.*\d)(?=.*\W))).*$/,
-            { message: "Password must contain at least one uppercase letter, one lowercase letter, and one number or special character." }
-        ),
+    password: z
+        .string()
+        .nonempty({
+            message: "Senha é obrigatório."
+        })
+        .min(8, { message: "A Senha deverá conter no mínimo 8 caracteres." })
+        .regex(/[a-z]+/, { message: "A Senha deverá conter pelo menos 1 letra minúscula." })
+        .regex(/[A-Z]+/, { message: "A Senha deverá conter pelo menos 1 letra maiúscula." })
+        .regex(/[@$!%*#?&]/, { message: "A Senha deverá conter pelo menos 1 caractere especial." })
+        .regex(/[0-9]+/, { message: "A Senha deverá conter pelo menos 1 número." }),
+    confirmPassword: z
+        .string()
+        .nonempty({
+            message: "Confirmar senha é obrigatório."
+        }),
 })
+    .refine((data) => data.password === data.confirmPassword, {
+        path: ["confirmPassword"],
+        message: "As senhas não coincidem.",
+    })
+
+
 
 export default function Register() {
 
@@ -25,11 +47,34 @@ export default function Register() {
             name: "",
             email: "",
             password: "",
-            lastname: ""
+            lastname: "",
+            confirmPassword: ""
         },
     })
 
+    const [errors, setErrors] = useState<GraphQLErrorExtensions>({})
+    const [registerUser, { loading, error, data }] = useMutation(REGISTER_USER);
+
     async function onSubmit(data: z.infer<typeof FormSchema>) {
+
+        try {
+            setErrors({})
+            await registerUser({
+                variables: {
+                    email: data.email,
+                    password: data.password,
+                    fullname: data.name + data.lastname,
+                    confirmPassword: data.confirmPassword,
+                },
+            })
+            console.log("DATA", data)
+            console.log(error?.graphQLErrors[0].extensions)
+        } catch (_) {
+            if (error && error.graphQLErrors && error.graphQLErrors[0].extensions) {
+                const validationErrors = error.graphQLErrors[0].extensions
+                setErrors(validationErrors)
+            }
+        }
 
         // setLoading(true);
 
@@ -131,6 +176,21 @@ export default function Register() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Password</FormLabel>
+                                            <FormControl>
+                                                <Input type="password" placeholder="********" {...field} />
+                                            </FormControl>
+                                            <FormMessage className="text-xs" />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <FormField
+                                    control={form.control}
+                                    name="confirmPassword"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>ConfirmPassword</FormLabel>
                                             <FormControl>
                                                 <Input type="password" placeholder="********" {...field} />
                                             </FormControl>
